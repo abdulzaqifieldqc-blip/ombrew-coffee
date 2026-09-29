@@ -13,7 +13,7 @@ jobs:
     steps:
 
       # =========================
-      # 1. SOURCE
+      # 1. AMBIL SOURCE GITHUB
       # =========================
       - name: Checkout source
         uses: actions/checkout@v4
@@ -36,54 +36,63 @@ jobs:
           java-version: 21
 
       # =========================
-      # 4. ANDROID SDK
+      # 4. CEK SOURCE
       # =========================
-      - name: Check Android SDK
+      - name: Check source files
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "Isi repository:"
+          ls -la
 
-          SDKMANAGER=$(find "$ANDROID_HOME" \
-            -type f \
-            -name sdkmanager \
-            -perm -111 2>/dev/null | head -1)
+          echo ""
+          echo "Cek index.html:"
+          test -f index.html && echo "index.html OK" || exit 1
 
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager tidak ditemukan"
-            find "$ANDROID_HOME" \
-              -type f \
-              -name sdkmanager 2>/dev/null || true
-            exit 1
-          fi
+          echo ""
+          echo "Cek style.css:"
+          test -f style.css && echo "style.css OK" || exit 1
 
-          echo "SDKMANAGER=$SDKMANAGER"
-
-          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
-          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
-
-          yes | "$SDKMANAGER" --licenses || true
-
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          echo ""
+          echo "Cek app.js:"
+          test -f app.js && echo "app.js OK" || exit 1
 
       # =========================
-      # 5. INSTALL DEPENDENCIES
+      # 5. BUAT PACKAGE.JSON
+      # =========================
+      - name: Prepare package.json
+        run: |
+          cat > package.json <<'EOF'
+          {
+            "name": "nika-ombrew-coffee",
+            "version": "1.0.0",
+            "private": true,
+            "scripts": {
+              "build": "echo build"
+            },
+            "dependencies": {
+              "@capacitor/core": "^7.4.3",
+              "@capacitor/android": "^7.4.3"
+            },
+            "devDependencies": {
+              "@capacitor/cli": "^7.4.3",
+              "@capacitor/assets": "^3.0.5"
+            }
+          }
+          EOF
+
+          echo "package.json dibuat:"
+          cat package.json
+
+      # =========================
+      # 6. INSTALL
       # =========================
       - name: Install dependencies
         run: |
           npm install
 
-          npm install \
-            @capacitor/core \
-            @capacitor/cli \
-            @capacitor/android
-
-          npm install -D @capacitor/assets
+          npx cap --version
 
       # =========================
-      # 6. FORCE CAPACITOR CONFIG
+      # 7. CAPACITOR CONFIG
       # =========================
       - name: Configure Capacitor
         run: |
@@ -96,15 +105,17 @@ jobs:
           }
           EOF
 
+          cat capacitor.config.json
+
       # =========================
-      # 7. SAFE AREA FIX
+      # 8. SAFE AREA FIX
       # =========================
       - name: Fix Android safe area
         run: |
           cat >> style.css <<'EOF'
 
           /* =========================================
-             FINAL ANDROID SAFE AREA FIX
+             NIKA OMBREW FINAL ANDROID SAFE AREA
              ========================================= */
 
           html,
@@ -120,7 +131,7 @@ jobs:
             box-sizing: border-box;
           }
 
-          /* HEADER / BRAND */
+          /* BRAND */
           .topbar {
             padding-top: 22px !important;
             padding-bottom: 16px !important;
@@ -137,169 +148,6 @@ jobs:
             font-size: 31px !important;
           }
 
-          /* CONTENT */
+          /* HOME */
           main,
-          .page {
-            padding-bottom: 150px !important;
-          }
-
-          .product-grid,
-          #menuList {
-            padding-bottom: 100px !important;
-          }
-
-          /* CART FLOATING BUTTON */
-          .cart-mini {
-            position: fixed !important;
-            right: 16px !important;
-            bottom: 92px !important;
-            z-index: 200 !important;
-          }
-
-          /* PRODUCT DETAIL SHEET */
-          .sheet,
-          .bottom-sheet,
-          .product-sheet,
-          .modal-sheet {
-            padding-bottom: calc(
-              110px + env(safe-area-inset-bottom)
-            ) !important;
-          }
-
-          /* BOTTOM NAV */
-          .bottom-nav {
-            position: fixed !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            z-index: 999 !important;
-            padding-bottom: env(safe-area-inset-bottom) !important;
-          }
-
-          EOF
-
-      # =========================
-      # 8. CREATE APK ICON
-      # =========================
-      - name: Prepare NIKA APK icon
-        run: |
-          mkdir -p resources
-
-          cat > resources/icon.svg <<'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg"
-               width="1024"
-               height="1024"
-               viewBox="0 0 1024 1024">
-
-            <rect
-              x="0"
-              y="0"
-              width="1024"
-              height="1024"
-              rx="220"
-              fill="#073B70"/>
-
-            <text
-              x="512"
-              y="475"
-              text-anchor="middle"
-              font-family="Arial, sans-serif"
-              font-size="250"
-              font-weight="900"
-              fill="#FFFFFF">
-              NO
-            </text>
-
-            <text
-              x="512"
-              y="665"
-              text-anchor="middle"
-              font-family="Arial, sans-serif"
-              font-size="105"
-              font-weight="700"
-              letter-spacing="8"
-              fill="#FFFFFF">
-              COFFEE
-            </text>
-
-          </svg>
-          EOF
-
-          if command -v magick >/dev/null 2>&1; then
-            magick resources/icon.svg resources/icon.png
-          elif command -v convert >/dev/null 2>&1; then
-            convert resources/icon.svg resources/icon.png
-          else
-            sudo apt-get update
-            sudo apt-get install -y imagemagick
-            convert resources/icon.svg resources/icon.png
-          fi
-
-          file resources/icon.png
-          ls -lh resources/icon.png
-
-      # =========================
-      # 9. CREATE ANDROID
-      # =========================
-      - name: Add Android platform
-        run: |
-          rm -rf android
-          npx cap add android
-
-      # =========================
-      # 10. GENERATE ICONS
-      # =========================
-      - name: Generate Android icons
-        run: |
-          npx capacitor-assets generate --android
-
-      # =========================
-      # 11. FORCE APP ICON
-      # =========================
-      - name: Verify Android icon
-        run: |
-          echo "Checking generated Android icons..."
-
-          find android/app/src/main/res \
-            -type f \
-            \( -name "ic_launcher*" -o -name "ic_launcher_round*" \) \
-            -print
-
-          grep -R "ic_launcher" \
-            android/app/src/main/AndroidManifest.xml || true
-
-      # =========================
-      # 12. SYNC
-      # =========================
-      - name: Sync Capacitor
-        run: |
-          npx cap sync android
-
-      # =========================
-      # 13. BUILD APK
-      # =========================
-      - name: Build APK
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      # =========================
-      # 14. RENAME
-      # =========================
-      - name: Rename APK
-        run: |
-          cp \
-            android/app/build/outputs/apk/debug/app-debug.apk \
-            NIKA-x-OMBreW-Coffee.apk
-
-          ls -lh NIKA-x-OMBreW-Coffee.apk
-
-      # =========================
-      # 15. UPLOAD
-      # =========================
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: NIKA-x-OMBreW-Coffee
-          path: NIKA-x-OMBreW-Coffee.apk
+          .
