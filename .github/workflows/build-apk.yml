@@ -34,9 +34,13 @@ jobs:
         run: |
           npm install
           npm install -D typescript
+          npm install -D @capacitor/assets
 
       - name: Add Android platform
         run: npx cap add android
+
+      - name: Generate Android icon
+        run: npx capacitor-assets generate --android
 
       - name: Sync application
         run: npx cap sync android
@@ -47,8 +51,12 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
+      - name: Rename APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk NIKA-x-OMBreW-Coffee.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NIKA-OMBREW-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: NIKA-x-OMBreW-Coffee
+          path: NIKA-x-OMBreW-Coffee.apk
