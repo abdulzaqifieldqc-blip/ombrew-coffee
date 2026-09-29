@@ -1,0 +1,9 @@
+{
+  "name": "OMBREW COFFEE",
+  "short_name": "OMBREW",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7faff",
+  "theme_color": "#1261d6",
+  "description": "Menu digital OMBREW COFFEE"
+}
