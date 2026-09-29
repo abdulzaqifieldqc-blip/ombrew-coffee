@@ -29,7 +29,7 @@ jobs:
         run: |
           rm -rf app_source
           mkdir app_source
-          unzip -o NIKA-OMBREW-OFFLINE-FIX-ROOT.zip -d app_source
+          unzip -o NIKA-OMBREW-OFFLINE-FINAL-SAFE-TOP.zip -d app_source
 
       - name: Install dependencies
         working-directory: app_source
