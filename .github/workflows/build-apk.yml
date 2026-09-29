@@ -27,8 +27,7 @@ jobs:
 
       - name: Extract application
         run: |
-          unzip -o NIKA-OMBREW-UPLOAD.zip -d app_source
-          cp -r app_source/. ./
+          unzip -o NIKA-OMBREW-OFFLINE-FIX-ROOT.zip -d app_source
 
       - name: Install dependencies
         run: |
