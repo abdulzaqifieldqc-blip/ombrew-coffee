@@ -1,0 +1,59 @@
+name: Build NIKA OMBREW APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract application
+        run: |
+          unzip -o NIKA-OMBREW-UPLOAD.zip -d app_source
+          cp -r app_source/. ./ 2>/dev/null || true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Capacitor Android
+        run: |
+          npm install @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync application
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NIKA-OMBREW-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
