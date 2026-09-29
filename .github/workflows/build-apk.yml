@@ -31,7 +31,9 @@ jobs:
           cp -r app_source/. ./
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install -D typescript
 
       - name: Add Android platform
         run: npx cap add android
