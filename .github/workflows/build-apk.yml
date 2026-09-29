@@ -25,62 +25,53 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Extract application
+      - name: Prepare Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Extract NIKA OMBREW source
         run: |
           rm -rf app_source
           mkdir app_source
-          unzip -o NIKA-OMBREW-OFFLINE-FINAL-BOTTOM-FIX.zip -d app_source
 
-          PACKAGE_JSON=$(find app_source -type f -name package.json -print -quit)
+          unzip -o NIKA-OMBREW-OFFLINE-LAYOUT-FIX-FINAL.zip -d app_source
 
-          if [ -z "$PACKAGE_JSON" ]; then
-            echo "package.json tidak ditemukan di dalam ZIP"
-            find app_source -maxdepth 3 -type f
-            exit 1
-          fi
-
-          PROJECT_DIR=$(dirname "$PACKAGE_JSON")
-
-          if [ "$PROJECT_DIR" != "app_source" ]; then
-            cp -a "$PROJECT_DIR"/. app_source/
-          fi
-
-          echo "Project root:"
-          ls -la app_source
+          echo "=== PROJECT FILES ==="
+          find app_source -maxdepth 2 -type f | sort
 
       - name: Install dependencies
         working-directory: app_source
         run: |
           npm install
-          npm install -D typescript
-          npm install -D @capacitor/assets
 
-      - name: Prepare app icon
+      - name: Prepare Android icon
         working-directory: app_source
         run: |
-          mkdir -p resources
+          mkdir -p resources/icon
 
-          if [ -f resources/icon/icon.png ]; then
-            cp resources/icon/icon.png resources/icon.png
-          elif [ -f resources/icon.png ]; then
-            echo "Icon sudah benar"
-          else
-            echo "Icon NO COFFEE tidak ditemukan"
-            find resources -maxdepth 3 -type f 2>/dev/null || true
+          if [ ! -f resources/icon/icon.png ]; then
+            echo "ERROR: icon.png tidak ditemukan"
             exit 1
           fi
 
+          file resources/icon/icon.png
+
       - name: Add Android platform
         working-directory: app_source
-        run: npx cap add android
+        run: |
+          npx cap add android
 
       - name: Generate Android icons
         working-directory: app_source
-        run: npx capacitor-assets generate --android
+        run: |
+          npx capacitor-assets generate --android
 
-      - name: Sync application
+      - name: Sync Capacitor
         working-directory: app_source
-        run: npx cap sync android
+        run: |
+          npx cap sync android
 
       - name: Build APK
         working-directory: app_source/android
@@ -90,7 +81,8 @@ jobs:
 
       - name: Rename APK
         run: |
-          cp app_source/android/app/build/outputs/apk/debug/app-debug.apk NIKA-x-OMBreW-Coffee.apk
+          cp app_source/android/app/build/outputs/apk/debug/app-debug.apk \
+            NIKA-x-OMBreW-Coffee.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
