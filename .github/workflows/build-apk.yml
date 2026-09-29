@@ -10,10 +10,6 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
 
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,11 +25,6 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Prepare Android SDK
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
       - name: Extract application
         run: |
           unzip -o NIKA-OMBREW-UPLOAD.zip -d app_source
@@ -41,10 +32,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Install Capacitor Android
-        run: |
-          npm install @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
 
       - name: Add Android platform
         run: npx cap add android
