@@ -36,10 +36,16 @@ jobs:
           npm install -D typescript
           npm install -D @capacitor/assets
 
+      - name: Prepare app icon
+        run: |
+          mkdir -p resources
+          cp resources/icon/icon.png resources/icon.png
+          file resources/icon.png
+
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Generate Android icon
+      - name: Generate Android icons
         run: npx capacitor-assets generate --android
 
       - name: Sync application
