@@ -12,36 +12,34 @@ jobs:
 
     steps:
 
-      # ==========================================
+      # =========================================
       # 1. CHECKOUT
-      # ==========================================
+      # =========================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ==========================================
+      # =========================================
       # 2. NODE
-      # ==========================================
+      # =========================================
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # ==========================================
+      # =========================================
       # 3. JAVA
-      # ==========================================
+      # =========================================
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      # ==========================================
+      # =========================================
       # 4. FIND ZIP
-      # ==========================================
-      - name: Find NIKA OMBREW ZIP
+      # =========================================
+      - name: Find source ZIP
         run: |
-          echo "Mencari file ZIP..."
-
           ZIP_FILE=$(find . -maxdepth 2 -type f -iname "*.zip" | head -1)
 
           if [ -z "$ZIP_FILE" ]; then
@@ -54,23 +52,23 @@ jobs:
 
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
-      # ==========================================
+      # =========================================
       # 5. EXTRACT ZIP
-      # ==========================================
-      - name: Extract NIKA OMBREW source
+      # =========================================
+      - name: Extract source
         run: |
           rm -rf app_source
-          mkdir -p app_source
+          mkdir -p app_source/extracted
 
           unzip -q "$ZIP_FILE" -d app_source/extracted
 
-          echo "Isi hasil extract:"
-          find app_source/extracted -maxdepth 3 -type f | head -100
+          echo "Isi ZIP:"
+          find app_source/extracted -maxdepth 4 -type f | head -150
 
-      # ==========================================
+      # =========================================
       # 6. FIND INDEX.HTML
-      # ==========================================
-      - name: Locate web source
+      # =========================================
+      - name: Locate index.html
         run: |
           INDEX=$(find app_source/extracted \
             -type f \
@@ -78,66 +76,98 @@ jobs:
             | head -1)
 
           if [ -z "$INDEX" ]; then
-            echo "ERROR: index.html tidak ditemukan di dalam ZIP"
+            echo "ERROR: index.html tidak ditemukan"
             exit 1
           fi
 
-          echo "index.html ditemukan:"
-          echo "$INDEX"
+          echo "INDEX=$INDEX"
 
           SOURCE_DIR=$(dirname "$INDEX")
 
           echo "SOURCE_DIR=$SOURCE_DIR" >> "$GITHUB_ENV"
 
-      # ==========================================
-      # 7. COPY SOURCE
-      # ==========================================
-      - name: Prepare source directory
+      # =========================================
+      # 7. FIND ORIGINAL ICON
+      # =========================================
+      - name: Locate original APK icon
+        run: |
+          ICON=$(find app_source/extracted \
+            -type f \
+            -path "*/resources/icon/icon.png" \
+            | head -1)
+
+          if [ -z "$ICON" ]; then
+            echo "ERROR: resources/icon/icon.png tidak ditemukan"
+            exit 1
+          fi
+
+          echo "ICON ASLI:"
+          echo "$ICON"
+
+          file "$ICON"
+
+          echo "ICON_SOURCE=$ICON" >> "$GITHUB_ENV"
+
+      # =========================================
+      # 8. PREPARE WEB SOURCE
+      # =========================================
+      - name: Prepare web source
         run: |
           rm -rf app_source/web
-
           mkdir -p app_source/web
 
           cp -a "$SOURCE_DIR"/. app_source/web/
 
-          echo "SOURCE WEB:"
+          test -f app_source/web/index.html
+
+          echo "Web source siap:"
           ls -la app_source/web
 
-          test -f app_source/web/index.html
-          echo "index.html OK"
+      # =========================================
+      # 9. PREPARE ORIGINAL ICON
+      # =========================================
+      - name: Prepare original icon
+        run: |
+          mkdir -p app_source/resources/icon
 
-      # ==========================================
-      # 8. PACKAGE JSON
-      # ==========================================
+          cp "$ICON_SOURCE" \
+            app_source/resources/icon/icon.png
+
+          echo "ICON YANG AKAN DIPAKAI:"
+          file app_source/resources/icon/icon.png
+          ls -lh app_source/resources/icon/icon.png
+
+      # =========================================
+      # 10. PACKAGE.JSON
+      # =========================================
       - name: Prepare package
         working-directory: app_source
         run: |
-          if [ ! -f package.json ]; then
-            cat > package.json <<'EOF'
+          cat > package.json <<'EOF'
           {
             "name": "nika-ombrew-coffee",
             "version": "1.0.0",
             "private": true
           }
           EOF
-          fi
 
-          cat package.json
-
-      # ==========================================
-      # 9. INSTALL CAPACITOR
-      # ==========================================
+      # =========================================
+      # 11. INSTALL CAPACITOR
+      # =========================================
       - name: Install Capacitor
         working-directory: app_source
         run: |
           npm install
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npm install -D @capacitor/assets
 
-      # ==========================================
-      # 10. PREPARE WEB DIRECTORY
-      # ==========================================
-      - name: Prepare web directory
+          npm install \
+            @capacitor/core@7 \
+            @capacitor/cli@7 \
+            @capacitor/android@7
+
+      # =========================================
+      # 12. PREPARE WWW
+      # =========================================
+      - name: Prepare www
         working-directory: app_source
         run: |
           rm -rf www
@@ -145,15 +175,13 @@ jobs:
 
           cp -a web/. www/
 
-          echo "WEB DIRECTORY:"
-          find www -maxdepth 2 -type f | head -100
-
           test -f www/index.html
-          echo "www/index.html OK"
 
-      # ==========================================
-      # 11. CAPACITOR CONFIG
-      # ==========================================
+          echo "www siap."
+
+      # =========================================
+      # 13. CAPACITOR CONFIG
+      # =========================================
       - name: Configure Capacitor
         working-directory: app_source
         run: |
@@ -166,18 +194,16 @@ jobs:
           }
           EOF
 
-          cat capacitor.config.json
-
-      # ==========================================
-      # 12. ANDROID SAFE AREA
-      # ==========================================
+      # =========================================
+      # 14. SAFE AREA FIX
+      # =========================================
       - name: Fix Android safe area
         working-directory: app_source
         run: |
           cat >> www/style.css <<'EOF'
 
           /* =========================================
-             NIKA OMBREW FINAL ANDROID SAFE AREA
+             NIKA OMBREW - FINAL SAFE AREA
              ========================================= */
 
           html,
@@ -193,11 +219,10 @@ jobs:
             box-sizing: border-box;
           }
 
-          /* BRAND */
+          /* HEADER / BRAND */
           .topbar {
             padding-top: 22px !important;
             padding-bottom: 16px !important;
-            min-height: 230px !important;
             box-sizing: border-box !important;
           }
 
@@ -210,7 +235,7 @@ jobs:
             font-size: 31px !important;
           }
 
-          /* HOME */
+          /* HOME CONTENT */
           main,
           .page {
             padding-bottom: 150px !important;
@@ -229,7 +254,7 @@ jobs:
             z-index: 200 !important;
           }
 
-          /* DETAIL PRODUK */
+          /* PRODUCT DETAIL */
           .sheet,
           .bottom-sheet,
           .product-sheet,
@@ -251,67 +276,9 @@ jobs:
 
           EOF
 
-      # ==========================================
-      # 13. PREPARE APK ICON
-      # ==========================================
-      - name: Prepare NIKA APK icon
-        working-directory: app_source
-        run: |
-          mkdir -p resources
-
-          cat > resources/icon.svg <<'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg"
-               width="1024"
-               height="1024"
-               viewBox="0 0 1024 1024">
-
-            <rect
-              width="1024"
-              height="1024"
-              rx="220"
-              fill="#073B70"/>
-
-            <text
-              x="512"
-              y="475"
-              text-anchor="middle"
-              font-family="Arial, sans-serif"
-              font-size="250"
-              font-weight="900"
-              fill="#FFFFFF">
-              NO
-            </text>
-
-            <text
-              x="512"
-              y="665"
-              text-anchor="middle"
-              font-family="Arial, sans-serif"
-              font-size="105"
-              font-weight="700"
-              letter-spacing="8"
-              fill="#FFFFFF">
-              COFFEE
-            </text>
-
-          </svg>
-          EOF
-
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-
-          convert \
-            -background none \
-            resources/icon.svg \
-            resources/icon.png
-
-          echo "ICON:"
-          file resources/icon.png
-          ls -lh resources/icon.png
-
-      # ==========================================
-      # 14. ANDROID SDK
-      # ==========================================
+      # =========================================
+      # 15. ANDROID SDK
+      # =========================================
       - name: Prepare Android SDK
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME" \
@@ -320,11 +287,9 @@ jobs:
             -perm -111 2>/dev/null | head -1)
 
           if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager tidak ditemukan"
+            echo "ERROR: sdkmanager tidak ditemukan"
             exit 1
           fi
-
-          echo "SDKMANAGER=$SDKMANAGER"
 
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
@@ -336,66 +301,180 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      # ==========================================
-      # 15. ADD ANDROID
-      # ==========================================
+      # =========================================
+      # 16. ADD ANDROID
+      # =========================================
       - name: Add Android platform
         working-directory: app_source
         run: |
           rm -rf android
           npx cap add android
 
-      # ==========================================
-      # 16. GENERATE ICON
-      # ==========================================
-      - name: Generate Android icons
-        working-directory: app_source
+      # =========================================
+      # 17. INSTALL IMAGEMAGICK
+      # =========================================
+      - name: Install image tools
         run: |
-          npx capacitor-assets generate --android
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
 
-      # ==========================================
-      # 17. VERIFY ICON
-      # ==========================================
-      - name: Verify Android icon
+      # =========================================
+      # 18. INSTALL ORIGINAL ICON DIRECTLY
+      # =========================================
+      - name: Install original launcher icon
         working-directory: app_source
         run: |
-          echo "===== ICON FILES ====="
+
+          ICON="resources/icon/icon.png"
+
+          test -f "$ICON"
+
+          echo "Memasang ICON ASLI:"
+          file "$ICON"
+
+          # Hapus adaptive icon buatan Capacitor
+          find android/app/src/main/res \
+            -type f \
+            \( \
+              -name "ic_launcher.xml" \
+              -o -name "ic_launcher_round.xml" \
+              -o -name "ic_launcher_foreground.xml" \
+              -o -name "ic_launcher_background.xml" \
+            \) \
+            -delete
+
+          # Hapus PNG launcher lama
+          find android/app/src/main/res \
+            -type f \
+            \( \
+              -name "ic_launcher.png" \
+              -o -name "ic_launcher_round.png" \
+            \) \
+            -delete
+
+          # Buat folder mipmap
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+
+          # =====================================
+          # PAKAI GAMBAR ASLI TANPA MENGUBAH DESAIN
+          # Hanya resize sesuai density Android
+          # =====================================
+
+          convert "$ICON" \
+            -resize 48x48! \
+            android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+
+          convert "$ICON" \
+            -resize 72x72! \
+            android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+
+          convert "$ICON" \
+            -resize 96x96! \
+            android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+
+          convert "$ICON" \
+            -resize 144x144! \
+            android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+
+          convert "$ICON" \
+            -resize 192x192! \
+            android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          # Round icon juga memakai LOGO ASLI
+          cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png \
+             android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+
+          cp android/app/src/main/res/mipmap-hdpi/ic_launcher.png \
+             android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+
+          cp android/app/src/main/res/mipmap-xhdpi/ic_launcher.png \
+             android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+
+          cp android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png \
+             android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+
+          cp android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
+             android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
+          echo "ICON ANDROID TERPASANG."
 
           find android/app/src/main/res \
             -type f \
             \( \
-              -name "ic_launcher*" \
-              -o -name "ic_launcher_round*" \
+              -name "ic_launcher.png" \
+              -o -name "ic_launcher_round.png" \
             \) \
             -print
 
-          echo ""
-          echo "===== MANIFEST ====="
+      # =========================================
+      # 19. FORCE MANIFEST ICON
+      # =========================================
+      - name: Set launcher icon
+        working-directory: app_source
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
 
-          grep -R \
+          sed -i \
+            's#android:icon="@[^"]*"#android:icon="@mipmap/ic_launcher"#g' \
+            "$MANIFEST"
+
+          sed -i \
+            's#android:roundIcon="@[^"]*"#android:roundIcon="@mipmap/ic_launcher_round"#g' \
+            "$MANIFEST"
+
+          echo "MANIFEST ICON:"
+          grep -n \
             'android:icon\|android:roundIcon' \
-            android/app/src/main/AndroidManifest.xml || true
+            "$MANIFEST" || true
 
-      # ==========================================
-      # 18. SYNC
-      # ==========================================
+      # =========================================
+      # 20. SYNC
+      # =========================================
       - name: Sync Capacitor
         working-directory: app_source
         run: |
           npx cap sync android
 
-      # ==========================================
-      # 19. BUILD APK
-      # ==========================================
+      # =========================================
+      # 21. VERIFY ICON AFTER SYNC
+      # =========================================
+      - name: Final icon verification
+        working-directory: app_source
+        run: |
+          echo "================================="
+          echo "FINAL ICON CHECK"
+          echo "================================="
+
+          find android/app/src/main/res \
+            -type f \
+            \( \
+              -name "ic_launcher.png" \
+              -o -name "ic_launcher_round.png" \
+            \) \
+            -print
+
+          echo ""
+          echo "MANIFEST:"
+          grep -n \
+            'android:icon\|android:roundIcon' \
+            android/app/src/main/AndroidManifest.xml || true
+
+      # =========================================
+      # 22. BUILD APK
+      # =========================================
       - name: Build APK
         working-directory: app_source/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      # ==========================================
-      # 20. RENAME
-      # ==========================================
+      # =========================================
+      # 23. RENAME APK
+      # =========================================
       - name: Rename APK
         working-directory: app_source
         run: |
@@ -405,9 +484,9 @@ jobs:
 
           ls -lh NIKA-x-OMBreW-Coffee.apk
 
-      # ==========================================
-      # 21. UPLOAD APK
-      # ==========================================
+      # =========================================
+      # 24. UPLOAD
+      # =========================================
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
