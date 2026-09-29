@@ -27,38 +27,45 @@ jobs:
 
       - name: Extract application
         run: |
+          rm -rf app_source
+          mkdir app_source
           unzip -o NIKA-OMBREW-OFFLINE-FIX-ROOT.zip -d app_source
 
       - name: Install dependencies
+        working-directory: app_source
         run: |
           npm install
           npm install -D typescript
           npm install -D @capacitor/assets
 
       - name: Prepare app icon
+        working-directory: app_source
         run: |
           mkdir -p resources
           cp resources/icon/icon.png resources/icon.png
           file resources/icon.png
 
       - name: Add Android platform
+        working-directory: app_source
         run: npx cap add android
 
       - name: Generate Android icons
+        working-directory: app_source
         run: npx capacitor-assets generate --android
 
       - name: Sync application
+        working-directory: app_source
         run: npx cap sync android
 
       - name: Build APK
-        working-directory: android
+        working-directory: app_source/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Rename APK
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk NIKA-x-OMBreW-Coffee.apk
+          cp app_source/android/app/build/outputs/apk/debug/app-debug.apk NIKA-x-OMBreW-Coffee.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
