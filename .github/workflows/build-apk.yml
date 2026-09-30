@@ -36,14 +36,14 @@ jobs:
           java-version: 21
 
       # =========================================
-      # 4. FIND ZIP V32
+      # 4. FIND ZIP V33
       # =========================================
       - name: Find source ZIP
         run: |
-          ZIP_FILE="./NIKA-OMBREW-OFFLINE-MENU-ORDER-BADGES-V32.zip"
+          ZIP_FILE="./NIKA-OMBREW-OFFLINE-MENU-ORDER-BADGES-V33.zip"
 
           if [ ! -f "$ZIP_FILE" ]; then
-            echo "ERROR: ZIP V32 tidak ditemukan:"
+            echo "ERROR: ZIP V33 tidak ditemukan:"
             echo "$ZIP_FILE"
             echo ""
             echo "File yang tersedia:"
@@ -199,16 +199,12 @@ jobs:
           EOF
 
       # =========================================
-      # 14. SAFE AREA AND ANDROID UI FIX
+      # 14. ANDROID SAFE AREA
       # =========================================
       - name: Fix Android safe area
         working-directory: app_source
         run: |
           cat >> www/style.css <<'EOF'
-
-          /* =========================================
-             NIKA OMBREW - ANDROID SAFE AREA
-             ========================================= */
 
           html,
           body {
@@ -222,8 +218,6 @@ jobs:
             padding-top: env(safe-area-inset-top) !important;
             box-sizing: border-box;
           }
-
-          /* HEADER */
 
           .topbar {
             padding-top: 22px !important;
@@ -240,8 +234,6 @@ jobs:
             font-size: 31px !important;
           }
 
-          /* HOME */
-
           main,
           .page {
             padding-bottom: 150px !important;
@@ -252,29 +244,25 @@ jobs:
             padding-bottom: 100px !important;
           }
 
-          /* CART MINI */
-
+          /* LIHAT KERANJANG */
           .cart-mini {
             position: fixed !important;
             right: 16px !important;
-            bottom: 100px !important;
+            bottom: 110px !important;
             z-index: 200 !important;
           }
 
-          /* PRODUCT DETAIL / BOTTOM SHEET */
-
+          /* PRODUCT DETAIL */
           .sheet,
           .bottom-sheet,
           .product-sheet,
           .modal-sheet {
             padding-bottom: calc(
-              150px + env(safe-area-inset-bottom)
+              160px + env(safe-area-inset-bottom)
             ) !important;
 
             box-sizing: border-box !important;
           }
-
-          /* ADD TO CART BUTTON */
 
           .sheet button,
           .bottom-sheet button,
@@ -284,14 +272,12 @@ jobs:
           }
 
           /* BOTTOM NAV */
-
           .bottom-nav {
             position: fixed !important;
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
             z-index: 999 !important;
-
             padding-bottom: env(safe-area-inset-bottom) !important;
           }
 
@@ -329,7 +315,6 @@ jobs:
         working-directory: app_source
         run: |
           rm -rf android
-
           npx cap add android
 
       # =========================================
@@ -354,7 +339,6 @@ jobs:
           echo "Memasang ICON ASLI:"
           file "$ICON"
 
-          # Hapus adaptive icon
           find android/app/src/main/res \
             -type f \
             \( \
@@ -365,7 +349,6 @@ jobs:
             \) \
             -delete
 
-          # Hapus launcher lama
           find android/app/src/main/res \
             -type f \
             \( \
@@ -374,14 +357,11 @@ jobs:
             \) \
             -delete
 
-          # Folder launcher
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
           mkdir -p android/app/src/main/res/mipmap-xxhdpi
           mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-
-          # ICON ASLI
 
           convert "$ICON" \
             -resize 48x48! \
@@ -402,8 +382,6 @@ jobs:
           convert "$ICON" \
             -resize 192x192! \
             android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-          # ROUND ICON = ICON ASLI
 
           cp android/app/src/main/res/mipmap-mdpi/ic_launcher.png \
              android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
@@ -446,12 +424,11 @@ jobs:
             "$MANIFEST" || true
 
       # =========================================
-      # 20. SYNC CAPACITOR
+      # 20. SYNC
       # =========================================
       - name: Sync Capacitor
         working-directory: app_source
         run: |
-
           npx cap sync android
 
       # =========================================
